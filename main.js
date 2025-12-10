@@ -64,7 +64,7 @@ const fileSelectHandler = function (event) {
   fileSelectArea.innerHTML = `<h2>${file.name}</h2>`;
 
   let mimeType = file.type;
-  if (mimeType === "image/x-icon") mimeType = "image/vnc.microsoft.icon";
+  if (mimeType === "image/x-icon") mimeType = "image/vnd.microsoft.icon";
 
   const fileExtension = file.name.split(".").pop();
 
