@@ -1,29 +1,25 @@
-import logoImage from 'src/ui/img/logo.svg';
-import { Icon } from "src/ui/components/Icon";
-import DarkModeToggle from 'src/ui/components/DarkModeToggle';
-import SelectedFileInfo from 'src/ui/components/Conversion/SelectedFileInfo';
-import AdvancedModeToggle from 'src/ui/components/AdvancedModeToggle';
+import Logo from "src/ui/components/Logo";
+import AdvancedModeToggle from "src/ui/components/AdvancedModeToggle";
+import { goToUploadHome } from "src/main.new";
 
 import "./index.css";
 
-export default function ConversionHeader() {
-    return (
-        <header className="conversion-header">
-            <div className="header-left">
-                <Icon
-                    src={ logoImage }
-                    size={ 32 }
-                    color="var(--primary)"
-                />
-                <h1 className="conversion-title">Convert to it!</h1>
-            </div>
+interface ConversionHeaderProps {
+	stepLabel?: string;
+	logoDisabled?: boolean;
+}
 
-            <div className="header-right">
-                {/* Desktop File Info */ }
-                <SelectedFileInfo className="desktop-only" />
-                <AdvancedModeToggle compact={ true } />
-                <DarkModeToggle />
-            </div>
-        </header>
-    );
+export default function ConversionHeader({ stepLabel, logoDisabled = false }: ConversionHeaderProps) {
+	return (
+		<header className="conversion-header">
+			<div className="header-left">
+				<Logo showName={true} size={24} onClick={goToUploadHome} disabled={logoDisabled} />
+				{stepLabel && <span className="header-step-label">{stepLabel}</span>}
+			</div>
+
+			<div className="header-right">
+				<AdvancedModeToggle compact={true} />
+			</div>
+		</header>
+	);
 }

@@ -1,86 +1,39 @@
 .conversion-body {
-    background-color: var(--bg-page);
-    color: var(--text-secondary);
-    min-height: 100vh;
-    display: flex;
-
-    min-width: 100%;
-    flex-direction: column;
-    overflow: hidden;
-
-    @media (max-width: 1024px) {
-        /*height: auto;*/
-        overflow-x: hidden;
-        /*overflow-y: auto;*/
-    }
-}
-
-.scroller {
-    overflow-y: auto;
+	background-color: var(--bg-page);
+	color: var(--text-secondary);
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .conversion-main {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-
-    @media (max-width: 1024px) {
-        flex-direction: column;
-    }
+	display: flex;
+	flex: 1;
+	min-height: 0;
 }
 
-.settings-sidebar {
-    width: 320px;
-    background: var(--bg-card);
-    border-inline-start: 1px solid var(--border-primary);
-    display: flex;
-    flex-direction: column;
-
-    position: sticky;
-    bottom: 0;
-
-    @media (max-width: 1024px) {
-        width: 100%;
-    }
-
-    .spacer {
-        flex: 1 1 auto;
-    }
+.conversion-action-bar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	padding: 0.75rem 1.25rem;
+	background: var(--bg-card);
+	border-top: 1px solid var(--border-primary);
+	flex-shrink: 0;
+	min-height: 64px;
 }
 
-.action-footer {
-    padding: 1.25rem;
-    background: var(--bg-page);
-    border-top: 1px solid var(--border-secondary);
-
-    .btn-convert {
-        width: 100%;
-        background: var(--btn-bg-primary);
-        color: var(--text-on-primary);
-        border: none;
-        padding: 1rem;
-        border-radius: 12px;
-        font-weight: 800;
-        font-size: 1.1rem;
-        cursor: pointer;
-        box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent);
-        transition: all 0.2s;
-
-        &:hover {
-            background: var(--btn-bg-primary-hover);
-            transform: translateY(-1px);
-        }
-    }
+.conversion-action-files {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	margin-inline-end: auto;
+	overflow-x: auto;
 }
 
-.desktop-only {
-    @media (max-width: 1024px) {
-        display: none !important;
-    }
-}
-
-.mobile-only {
-    @media (min-width: 1025px) {
-        display: none !important;
-    }
+.conversion-action-files .file-info-badge {
+	flex-shrink: 0;
 }
