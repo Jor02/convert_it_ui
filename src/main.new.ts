@@ -41,7 +41,12 @@ window.printSupportedFormatCache = () => {
 async function buildOptionList() {
 	ConversionOptions.clear();
 
+	const totalHandlers = handlers.length;
+	let loadedCount = 0;
+
 	for (const handler of handlers) {
+		LoadingToolsText.value = `Loading ${handler.name} (${loadedCount}/${totalHandlers}, ${ConversionOptions.size} formats)…`;
+
 		if (!window.supportedFormatCache.has(handler.name)) {
 			console.warn(`Cache miss for formats of handler "${handler.name}"`);
 
@@ -66,6 +71,8 @@ async function buildOptionList() {
 			if (!format.mime) continue;
 			ConversionOptions.set(format, handler);
 		}
+
+		loadedCount++;
 	}
 
 	window.traversionGraph.init(window.supportedFormatCache, handlers);

@@ -53,6 +53,7 @@ class FFmpegHandler implements FormatHandler {
 
   #ffmpeg?: FFmpeg;
   #ffmpegLoaded: boolean = false;
+  #initPromise?: Promise<void>;
 
   #stdout: string = "";
   #boundStdoutHandler = (log: LogEvent) => {
@@ -73,7 +74,8 @@ class FFmpegHandler implements FormatHandler {
   async loadFFmpeg () {
     if (!this.#ffmpeg) return;
     await this.#ffmpeg.load({
-      coreURL: "/convert/wasm/ffmpeg-core.js"
+      coreURL: "/convert/wasm/ffmpeg-core.js",
+      wasmURL: "/convert/wasm/ffmpeg-core.wasm"
     });
     this.#ffmpegLoaded = true;
   }
@@ -133,10 +135,13 @@ class FFmpegHandler implements FormatHandler {
   }
 
   async init () {
+    if (this.ready) return;
+    if (this.#initPromise) return this.#initPromise;
 
-    this.#ffmpeg = new FFmpeg();
-    this.#ffmpegLoaded = false;
-    await this.loadFFmpeg();
+    this.#initPromise = (async () => {
+      this.#ffmpeg = new FFmpeg();
+      this.#ffmpegLoaded = false;
+      await this.loadFFmpeg();
 
     const getMuxerDetails = async (muxer: string) => {
 
@@ -300,6 +305,13 @@ class FFmpegHandler implements FormatHandler {
     this.terminateFFmpeg();
 
     this.ready = true;
+    })();
+
+    try {
+      await this.#initPromise;
+    } finally {
+      this.#initPromise = undefined;
+    }
   }
 
   getOptions() {
