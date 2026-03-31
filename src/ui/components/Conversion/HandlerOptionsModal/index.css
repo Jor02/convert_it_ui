@@ -97,86 +97,6 @@
 	box-shadow: 0 0 0 2px var(--primary-transparent);
 }
 
-/* Plugin Picker */
-.handler-options-plugin-picker {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	padding: 0.875rem 1.5rem;
-	background: var(--bg-section);
-	border-bottom: 1px solid var(--border-primary);
-	flex-shrink: 0;
-}
-
-.handler-options-plugin-row {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.handler-options-plugin-picker span {
-	font-size: 0.6875rem;
-	font-weight: 600;
-	color: var(--text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	width: 110px;
-	flex-shrink: 0;
-}
-
-.handler-options-plugin-picker select {
-	appearance: none;
-	background: var(--bg-input);
-	color: var(--text-primary);
-	padding: 0.5rem 0.75rem;
-	border: 1px solid var(--border-primary);
-	border-radius: 5px;
-	font-size: 0.8125rem;
-	font-weight: 500;
-	flex: 1;
-	cursor: pointer;
-	outline: none;
-}
-
-.handler-modal-resolve-btn {
-	appearance: none;
-	border: 1px solid var(--btn-border);
-	border-radius: 8px;
-	padding: 0.55rem 0.85rem;
-	color: var(--text-secondary);
-	background: var(--bg-card);
-	transition: none;
-	cursor: pointer;
-	user-select: none;
-	font-size: 0.8rem;
-	font-weight: 600;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.handler-modal-resolve-btn:hover,
-.handler-modal-resolve-btn:focus-visible {
-	color: var(--text-primary);
-	background: var(--bg-section);
-	border-color: var(--border-secondary);
-}
-
-.handler-modal-resolve-btn:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-	pointer-events: none;
-}
-
-.handler-options-plugin-picker select:hover {
-	border-color: var(--border-secondary);
-}
-
-.handler-options-plugin-picker select:focus {
-	border-color: var(--primary);
-	box-shadow: 0 0 0 3px var(--primary-transparent);
-}
-
 /* Settings Sections - Collapsible */
 .conversion-settings-section {
 	display: flex;
@@ -522,13 +442,6 @@
 
 	.handler-options-modal-title-wrap p {
 		font-size: 0.75rem;
-	}
-
-	.handler-options-plugin-picker {
-		padding: 0.75rem 1.25rem;
-		flex-direction: column;
-		align-items: stretch;
-		gap: 0.5rem;
 	}
 
 	.conversion-option-item {

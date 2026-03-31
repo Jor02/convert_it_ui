@@ -28,21 +28,14 @@
 	position: relative;
 	padding: 0.1rem 0;
 }
-.log-entry:hover {
-	background: var(--bg-hover);
-}
 .log-time {
-	opacity: 0;
+	opacity: 1;
 	color: var(--text-muted);
 	white-space: nowrap;
 	margin-left: auto;
 	font-size: 0.7rem;
 	padding-left: 0.5rem;
 	flex-shrink: 0;
-	transition: opacity 0.15s ease-out;
-}
-.log-entry:hover .log-time {
-	opacity: 1;
 }
 .log-plugin {
 	color: #a855f7;
