@@ -3,13 +3,13 @@ import { Wrench } from "lucide-preact";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
 import { useEffect, useRef } from "preact/hooks";
-import StyledButton, { ButtonVariant } from "src/ui/components/StyledButton";
+import StyledButton, { ButtonVariant, ButtonSize } from "src/ui/components/StyledButton";
 
 interface AdvancedModeToggleProps {
 	compact?: boolean;
 }
 
-export default function AdvancedModeToggle({ compact = true }: AdvancedModeToggleProps) {
+export default function AdvancedModeToggle({ compact = true }: Readonly<AdvancedModeToggleProps>) {
 	const btnRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
@@ -31,11 +31,12 @@ export default function AdvancedModeToggle({ compact = true }: AdvancedModeToggl
 	return (
 		<StyledButton
 			buttonRef={btnRef}
-			variant={compact ? ButtonVariant.Compact : ButtonVariant.Default}
+			variant={compact ? ButtonVariant.Icon : ButtonVariant.Default}
+			size={compact ? ButtonSize.Small : ButtonSize.Medium}
 			onClick={handleClick}
 		>
 			{compact ? (
-				<Wrench size={18} />
+				<Wrench size={16} />
 			) : (
 				<>
 					<Wrench size={16} />

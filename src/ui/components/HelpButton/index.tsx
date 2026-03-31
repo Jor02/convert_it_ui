@@ -57,9 +57,9 @@ export default function HelpButton() {
 		<StyledButton
 			buttonRef={btnRef}
 			onClick={onHelpClick}
+			icon={<HelpCircle size={16} />}
 		>
-			<HelpCircle size={16} />
-			{" Help"}
+			Help
 		</StyledButton>
-	)
+	);
 }

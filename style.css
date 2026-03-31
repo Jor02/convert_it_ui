@@ -35,7 +35,7 @@
 
   --btn-text-primary: var(--text-on-primary);
   --btn-bg-primary: var(--primary);
-  --btn-bg-primary-hover: #1e6ec4;
+  --btn-bg-primary-hover: color-mix(in srgb, var(--primary) 85%, black);
 
   --btn-text-secondary: var(--text-muted);
   --btn-bg-secondary: #ffffff;
@@ -75,7 +75,7 @@
 
   --btn-text-primary: #ffffff;
   --btn-bg-primary: var(--primary);
-  --btn-bg-primary-hover: #1e6ec4;
+  --btn-bg-primary-hover: color-mix(in srgb, var(--primary) 85%, white);
 
   --btn-text-secondary: var(--text-secondary);
   --btn-bg-secondary: #252525;

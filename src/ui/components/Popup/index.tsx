@@ -2,9 +2,9 @@ import type { TargetedMouseEvent } from "preact";
 import { useSignalEffect } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import { popupOpen, closePopup } from "src/ui/PopupStore";
-
-import "./index.css";
 import { PopupData } from "src/ui";
+import StyledButton, { ButtonVariant, ButtonSize } from "src/ui/components/StyledButton";
+import "./index.css";
 
 export default function Popup() {
 	const ref = useRef<HTMLDialogElement>(null);
@@ -13,8 +13,8 @@ export default function Popup() {
 		const elem = ref.current!;
 		if (popupOpen.value) {
 			if (!elem.open) elem.showModal();
-		} else {
-			if (elem.open) elem.close();
+		} else if (elem.open) {
+			elem.close();
 		}
 	});
 
@@ -23,11 +23,11 @@ export default function Popup() {
 			if (ev.key === "Escape") ev.preventDefault();
 			if (
 				ev.key === "Escape"
-				&& (typeof PopupData.value.dismissible === "undefined" || PopupData.value.dismissible)
+				&& (PopupData.value.dismissible === undefined || PopupData.value.dismissible)
 			) closePopup();
 		};
-		window.addEventListener("keydown", handler);
-		return () => window.removeEventListener("keydown", handler);
+		globalThis.addEventListener("keydown", handler);
+		return () => globalThis.removeEventListener("keydown", handler);
 	}, []);
 
 	const clickHandler = (ev: TargetedMouseEvent<HTMLDialogElement>) => {
@@ -62,12 +62,20 @@ export default function Popup() {
 
 	return (
 		<dialog id="popup" ref={ref} onClick={clickHandler}>
-			{getPopupContents()}
-			{PopupData.value.buttonText && (
-				<button onClick={handleButtonClick}>
-					{PopupData.value.buttonText}
-				</button>
-			)}
+			<div className="popup-body">
+				{getPopupContents()}
+				{PopupData.value.buttonText && (
+					<div className="popup-actions">
+						<StyledButton 
+							variant={ButtonVariant.Primary} 
+							size={ButtonSize.Small}
+							onClick={handleButtonClick}
+						>
+							{PopupData.value.buttonText}
+						</StyledButton>
+					</div>
+				)}
+			</div>
 		</dialog>
 	);
 }
