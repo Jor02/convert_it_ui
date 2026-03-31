@@ -29,6 +29,11 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 1rem;
+
+		.file-info-badge {
+			transform: scale(1.1);
+			margin-bottom: 1rem;
+		}
 	}
 
 	.loading-title {
