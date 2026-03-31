@@ -47,7 +47,7 @@ export default function LoadingScreen({
 
 			<div className="loading-metrics-card">
 				<div 
-					className="loading-conversion-info"
+					className={`loading-conversion-info ${isDone ? 'is-done' : ''}`}
 					style={{
 						'--progress': `${ProgressStore.percent.value * 100}%`
 					} as any}
