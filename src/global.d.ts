@@ -34,6 +34,9 @@ declare global {
         outputHandlerName?: string;
       }
     ) => Promise<ConvertPathNode[] | null>;
+    openPopup: () => boolean;
+    closePopup: () => boolean;
+    togglePopup: () => boolean;
   }
 }
 

@@ -31,10 +31,7 @@ export const openPopup = () => (popupOpen.value = true);
 export const closePopup = () => (popupOpen.value = false);
 export const togglePopup = () => (popupOpen.value = !popupOpen.value);
 
-// Manual overrides
-// @ts-expect-error
+// Window exports
 window.openPopup = openPopup;
-// @ts-expect-error
 window.closePopup = closePopup;
-// @ts-expect-error
 window.togglePopup = togglePopup;
