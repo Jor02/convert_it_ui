@@ -1,30 +1,26 @@
 import type { FileFormat, FileData, FormatHandler, ConvertPathNode } from "./FormatHandler.js";
-import normalizeMimeType from "./normalizeMimeType.js";
 import handlers from "./handlers";
 import { TraversionGraph } from "./TraversionGraph.js";
-import { PopupData } from "./ui/index.js";
-import { closePopup, openPopup } from "./ui/PopupStore.js";
+import { getOptionValues, initializeHandlerOptions } from "./HandlerOptions.js";
+import { CurrentPage, LoadingToolsText, Pages, PopupData } from "./ui/AppState.js";
 import { signal } from "@preact/signals";
 import { Mode, ModeEnum } from "./ui/ModeStore.js";
+import { ProgressStore } from "./ui/ProgressStore.js";
 
-/** KV pairs of files */
-type FileRecord = Record<`${string}-${string}`, File>
+type FileRecord = Record<`${string}-${string}`, File>;
 
-/** Map of available formats and its handler */
 export type ConversionOptionsMap = Map<FileFormat, FormatHandler>;
-/** A single conversion option, derived from `ConversionOptionsMap` */
 export type ConversionOption = ConversionOptionsMap extends Map<infer K, infer V> ? [K, V] : never;
 
 export const ConversionOptions: ConversionOptionsMap = new Map();
 
-/**
- * Files currently selected for conversion
- */
 export const SelectedFiles = signal<FileRecord>({});
 
-/**
- * Handlers that support conversion from any formats
- */
+export function goToUploadHome(): void {
+	CurrentPage.value = Pages.Upload;
+	SelectedFiles.value = {};
+}
+
 export const ConversionsFromAnyInput: ConvertPathNode[] =
 	handlers
 		.filter(h => h.supportAnyInput && h.supportedFormats)
@@ -40,18 +36,23 @@ window.printSupportedFormatCache = () => {
 	for (const entry of window.supportedFormatCache)
 		entries.push(entry);
 	return JSON.stringify(entries, null, 2);
-}
+};
 
 async function buildOptionList() {
 	ConversionOptions.clear();
 
+	const totalHandlers = handlers.length;
+	let loadedCount = 0;
+
 	for (const handler of handlers) {
+		LoadingToolsText.value = `Loading ${handler.name} (${loadedCount}/${totalHandlers}, ${ConversionOptions.size} formats)…`;
+
 		if (!window.supportedFormatCache.has(handler.name)) {
 			console.warn(`Cache miss for formats of handler "${handler.name}"`);
 
 			try {
 				await handler.init();
-			} catch (_) { continue }
+			} catch (_) { continue; }
 
 			if (handler.supportedFormats) {
 				window.supportedFormatCache.set(handler.name, handler.supportedFormats);
@@ -63,36 +64,63 @@ async function buildOptionList() {
 
 		if (!supportedFormats) {
 			console.warn(`Handler "${handler.name}" doesn't support any formats`);
-			continue
+			continue;
 		}
 
 		for (const format of supportedFormats) {
 			if (!format.mime) continue;
 			ConversionOptions.set(format, handler);
 		}
+
+		loadedCount++;
 	}
 
-	closePopup();
+	window.traversionGraph.init(window.supportedFormatCache, handlers);
+	LoadingToolsText.value = undefined;
 }
 
-async function attemptConvertPath(files: FileData[], path: ConvertPathNode[]) {
-	PopupData.value = {
-		title: "Finding conversion route...",
-		text: `Trying ${path.map(c => c.format.format).join(" → ")}`
-	}
-	openPopup();
+let deadEndAttempts: ConvertPathNode[][];
 
+interface RouteConstraints {
+	forceInputHandler?: boolean;
+	forceOutputHandler?: boolean;
+	inputHandlerName?: string;
+	outputHandlerName?: string;
+}
+
+async function attemptConvertPath(files: FileData[], path: ConvertPathNode[], signal?: AbortSignal) {
+	const pathString = path.map(c => c.format.format).join(" → ");
+
+	for (const deadEnd of deadEndAttempts) {
+		let isDeadEnd = true;
+		for (let i = 0; i < deadEnd.length; i++) {
+			if (path[i] === deadEnd[i]) continue;
+			isDeadEnd = false;
+			break;
+		}
+		if (isDeadEnd) {
+			const deadEndString = deadEnd.slice(-2).map(c => c.format.format).join(" → ");
+			console.warn(`Skipping ${pathString} due to dead end near ${deadEndString}.`);
+			return null;
+		}
+	}
+
+	ProgressStore.progress(`Trying ${pathString}...`, 0);
+
+	const totalSteps = path.length - 1;
 	for (let i = 0; i < path.length - 1; i++) {
+		if (signal?.aborted) return null;
+
 		const handler = path[i + 1].handler;
+		const ctx = ProgressStore.createContext(handler.name, signal);
 
 		try {
 			let supportedFormats = window.supportedFormatCache.get(handler.name);
 
 			if (!handler.ready) {
-				try {
-					await handler.init();
-				} catch (_) { return null; }
-
+				ctx.log(`Initializing ${handler.name}...`);
+				await handler.init();
+				if (!handler.ready) throw `Handler "${handler.name}" not ready after init.`;
 				if (handler.supportedFormats) {
 					window.supportedFormatCache.set(handler.name, handler.supportedFormats);
 					supportedFormats = handler.supportedFormats;
@@ -101,44 +129,103 @@ async function attemptConvertPath(files: FileData[], path: ConvertPathNode[]) {
 
 			if (!supportedFormats) throw `Handler "${handler.name}" doesn't support any formats.`;
 
-			const inputFormat = supportedFormats.find(c => c.mime === path[i].format.mime && c.from)!;
+			const inputFormat = supportedFormats.find(c =>
+				c.from
+				&& c.mime === path[i].format.mime
+				&& c.format === path[i].format.format
+			) || (handler.supportAnyInput ? path[i].format : undefined);
 
-			files = (
-				await Promise.all([
-					handler.doConvert(files, inputFormat, path[i + 1].format),
-					// Ensure that we wait long enough for the UI to update
-					new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-				])
-			)[0];
+			if (!inputFormat) throw `Handler "${handler.name}" doesn't support the "${path[i].format.format}" format.`;
 
+			ctx.log(`Plugin call: ${handler.name} | from=${path[i].format.format} (${path[i].format.mime}) | to=${path[i + 1].format.format} (${path[i + 1].format.mime})`);
+			ctx.log(`Plugin options: ${JSON.stringify(getOptionValues(handler))}`, "debug");
+			ctx.log(`Converting ${path[i].format.format} → ${path[i + 1].format.format}`);
+			ProgressStore.progress(`${handler.name}: ${path[i].format.format} → ${path[i + 1].format.format}`, i / totalSteps);
+
+			files = (await Promise.all([
+				handler.doConvert(files, inputFormat, path[i + 1].format, undefined, ctx),
+				new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+			]))[0];
+
+			ctx.log(`Plugin done: ${handler.name} | from=${path[i].format.format} (${path[i].format.mime}) | to=${path[i + 1].format.format} (${path[i + 1].format.mime})`);
+			ctx.log(`Step ${i + 1}/${totalSteps} complete`);
 			if (files.some(c => !c.bytes.length)) throw "Output is empty.";
 		} catch (e) {
+			if (e instanceof DOMException && e.name === "AbortError") {
+				throw e;
+			}
+
 			console.log(path.map(c => c.format.format));
 			console.error(handler.name, `${path[i].format.format} → ${path[i + 1].format.format}`, e);
 
+			const deadEndPath = path.slice(0, i + 2);
+			deadEndAttempts.push(deadEndPath);
+			window.traversionGraph.addDeadEndPath(path.slice(0, i + 2));
+
+			ctx.log(`Dead end: ${path[i].format.format} → ${path[i + 1].format.format}`);
+			ProgressStore.progress("Looking for a valid path...", 0);
 			await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+			
 			return null;
 		}
 	}
+
+	ProgressStore.logs.value = [
+		...ProgressStore.logs.value,
+		{
+			timestamp: Date.now(),
+			plugin: "Router",
+			message: `Route done: ${path.map(c => `${c.handler.name}:${c.format.format}`).join(" -> ")}`,
+			level: "log"
+		}
+	];
+	return { files, path };
 }
 
 window.tryConvertByTraversing = async function (
 	files: FileData[],
 	from: ConvertPathNode,
-	to: ConvertPathNode
+	to: ConvertPathNode,
+	signal?: AbortSignal,
+	constraints?: RouteConstraints
 ) {
-	for await (const path of window.traversionGraph.searchPath(from, to, Mode.value === ModeEnum.Simple)) {
-		// Use exact output format if the target handler supports it
-		if (path.at(-1)?.handler === to.handler) {
+	deadEndAttempts = [];
+	window.traversionGraph.clearDeadEndPaths();
+	const simpleMode = Mode.value === ModeEnum.Simple;
+	let searchedPaths = 0;
+	for await (const path of window.traversionGraph.searchPath(from, to, simpleMode, (iterations, title) => {
+		ProgressStore.progress(title ?? `Finding route... (Checked ${iterations} paths)`, 0);
+	})) {
+		searchedPaths++;
+		if (searchedPaths % 8 === 0) {
+			ProgressStore.progress(`Finding route... (Checked ${searchedPaths} paths)`, 0);
+		}
+		if (signal?.aborted) return null;
+		if (path.at(-1)?.handler.name === to.handler.name) {
 			path[path.length - 1] = to;
 		}
-		const attempt = await attemptConvertPath(files, path);
+		const attempt = await attemptConvertPath(files, path, signal);
 		if (attempt) return attempt;
 	}
 	return null;
-}
+};
 
-function downloadFile(bytes: Uint8Array, name: string, mime: string) {
+window.previewConvertPath = async function (
+	from: ConvertPathNode,
+	to: ConvertPathNode,
+	simpleMode: boolean,
+	constraints?: RouteConstraints
+) {
+	for await (const path of window.traversionGraph.searchPath(from, to, simpleMode, () => {})) {
+		if (path.at(-1)?.handler.name === to.handler.name) {
+			path[path.length - 1] = to;
+		}
+		return path;
+	}
+	return null;
+};
+
+export function downloadFile(bytes: Uint8Array, name: string, mime: string) {
 	const blob = new Blob([bytes as BlobPart], { type: mime });
 	const link = document.createElement("a");
 	link.href = URL.createObjectURL(blob);
@@ -146,18 +233,26 @@ function downloadFile(bytes: Uint8Array, name: string, mime: string) {
 	link.click();
 }
 
-try {
-	const cacheJSON = await fetch("cache.json")
-		.then(r => r.json());
-	window.supportedFormatCache = new Map(cacheJSON);
-} catch (error) {
-	console.warn(
-		"Missing supported format precache.\n\n" +
-		"Consider saving the output of printSupportedFormatCache() to cache.json."
-	);
-} finally {
-	await buildOptionList();
-	console.log("Built initial format list.");
+async function initSupportedFormats() {
+	try {
+		initializeHandlerOptions(handlers);
+		try {
+			const cacheJSON = await fetch("cache.json").then(r => r.json());
+			window.supportedFormatCache = new Map(cacheJSON);
+		} catch {
+			console.warn(
+				"Missing supported format precache.\n\n" +
+				"Consider saving the output of printSupportedFormatCache() to cache.json."
+			);
+		}
+		await buildOptionList();
+		console.log("Built initial format list.");
+	} catch (e) {
+		console.error(e);
+		LoadingToolsText.value = "Could not load formats.";
+	}
 }
+
+void initSupportedFormats();
 
 console.debug(ConversionOptions);
