@@ -1,6 +1,6 @@
 import { elementToSVG, inlineResources } from "dom-to-svg";
 import CommonFormats, { Category } from "src/CommonFormats.ts";
-import type { FileData, FileFormat, FormatHandler } from "../FormatHandler.ts";
+import { NumberOption, TextOption, type FileData, type FileFormat, type FormatHandler } from "../FormatHandler.ts";
 import type { ConvertContext } from "../ui/ProgressStore.js";
 
 function nextPaint(): Promise<void> {
@@ -60,6 +60,13 @@ async function renderRootToSvgString(
 ): Promise<string> {
   await waitForRenderableAssets(root);
 
+  // If a specific width is requested, apply it before measuring to force line wrapping
+  if (options.width) {
+    root.style.width = `${options.width}px`;
+    root.style.overflowWrap = "break-word";
+    await nextPaint();
+  }
+
   const { width, height } = measureRenderedElement(root, options);
   const existingStyle = root.getAttribute("style") || "";
   const bg = options.backgroundColor ? `background-color:${options.backgroundColor};` : "";
@@ -110,6 +117,17 @@ export async function htmlContentToSvgString(
 
     shadow.appendChild(root);
 
+    // Look for a rendering hint from the document (like from an EPUB handler)
+    if (!options.width) {
+      const hint = parsed.querySelector('meta[name="conversion-suggested-width"]');
+      if (hint) {
+        const suggestedWidth = Math.max(0, Number.parseInt(hint.getAttribute("content") || "0", 10));
+        if (suggestedWidth) {
+          options.width = suggestedWidth;
+        }
+      }
+    }
+
     return await renderRootToSvgString(root, options);
   } finally {
     host.remove();
@@ -127,10 +145,56 @@ class HtmlToSvgHandler implements FormatHandler {
     }),
   ];
 
+  private readonly options: HtmlToSvgOptions = {
+    width: 0,
+    height: 0,
+    backgroundColor: "",
+  };
+
   public ready: boolean = true;
 
   async init() {
     this.ready = true;
+  }
+
+  public getOptions() {
+    return [
+      new NumberOption(
+        "svg-width",
+        "Width",
+        () => this.options.width ?? 0,
+        (value) => { this.options.width = value; },
+        {
+          min: 0,
+          defaultValue: 0,
+          description: "Target width in pixels (0 for auto). Forces line wrapping if set.",
+          unit: "px",
+        },
+      ),
+      new NumberOption(
+        "svg-height",
+        "Height",
+        () => this.options.height ?? 0,
+        (value) => { this.options.height = value; },
+        {
+          min: 0,
+          defaultValue: 0,
+          description: "Target height in pixels (0 for auto).",
+          unit: "px",
+        },
+      ),
+      new TextOption(
+        "svg-bg",
+        "Background color",
+        () => this.options.backgroundColor ?? "",
+        (value) => { this.options.backgroundColor = value; },
+        {
+          defaultValue: "",
+          placeholder: "e.g. #ffffff or transparent",
+          description: "Custom background color for the resulting SVG.",
+        },
+      ),
+    ];
   }
 
   async doConvert(
@@ -147,6 +211,13 @@ class HtmlToSvgHandler implements FormatHandler {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
+    // Prepare conversion options (convert 0 to undefined for the internal API)
+    const options: HtmlToSvgOptions = {
+      width: this.options.width || undefined,
+      height: this.options.height || undefined,
+      backgroundColor: this.options.backgroundColor || undefined,
+    };
+
     for (let i = 0; i < inputFiles.length; i++) {
       ctx?.throwIfAborted();
       ctx?.progress(`Rendering ${inputFiles[i].name} to SVG...`, i / inputFiles.length);
@@ -154,7 +225,7 @@ class HtmlToSvgHandler implements FormatHandler {
 
       const { name, bytes } = inputFiles[i];
       const htmlStr = decoder.decode(bytes);
-      const svgStr = await htmlContentToSvgString(htmlStr);
+      const svgStr = await htmlContentToSvgString(htmlStr, options);
       const newName = (name.endsWith(".html") ? name.slice(0, -5) : name) + ".svg";
       outputFiles.push({ name: newName, bytes: encoder.encode(svgStr) });
     }
