@@ -134,13 +134,14 @@ class EpubHandler implements FormatHandler {
           <html>
             <head>
               <meta charset="utf-8">
+              <meta name="conversion-suggested-width" content="850">
               <title>${(currentBook as any).package?.metadata?.title || baseName}</title>
               <style>
-                body { 
+                #print-content { 
                   font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, serif; 
                   max-width: 800px;
                   margin: 2rem auto;
-                  padding: 0 2rem;
+                  padding: 0 4rem;
                   line-height: 1.6;
                   color: #1a1a1a;
                 }
