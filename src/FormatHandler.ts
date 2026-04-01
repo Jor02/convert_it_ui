@@ -336,6 +336,15 @@ export interface FileData {
   readonly bytes: Uint8Array;
 }
 
+export interface SuggestedRouteStep {
+  /** Output format extension or format identifier to reach for this step. */
+  format: string;
+  /** Optional explicit handler name to use for this step. */
+  handler?: string;
+}
+
+export type SuggestedRouteDeclaration = string | SuggestedRouteStep;
+
 /**
  * Establishes a common interface for converting between file formats.
  * Often a "wrapper" for existing tools.
@@ -350,6 +359,12 @@ export interface FormatHandler {
    * Conversion using this handler will be performed only if no other direct conversion is found.
    */
   supportAnyInput?: boolean;
+  /**
+   * Optional prioritized route shortcuts expressed as full output chains.
+   * Each entry is a route from this handler's input to a final output, e.g.
+   * ["html", "typ", "pdf"] or ["svg", "pdf:typst"].
+   */
+  suggestedRoutes?: SuggestedRouteDeclaration[];
   /** Optional list of user-configurable options. */
   getOptions?: () => HandlerOptionDefinition[];
 
