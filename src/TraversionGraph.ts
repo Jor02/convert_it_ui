@@ -1,4 +1,4 @@
-import { ConvertPathNode, type FileFormat, type FormatHandler, type SuggestedRouteDeclaration, type SuggestedRouteStep } from "./FormatHandler.ts";
+import { ConvertPathNode, type FileFormat, type FormatHandler, type SuggestedRoute, type SuggestedRouteDeclaration, type SuggestedRouteStep } from "./FormatHandler.ts";
 import { PriorityQueue } from './PriorityQueue.ts';
 
 interface QueueNode {
@@ -326,40 +326,45 @@ export class TraversionGraph {
                 if (startNodeIndex === -1) continue;
 
                 const startNode = this.nodes[startNodeIndex];
-                const expanded = this.expandSuggestedRoute(startNode, handler.suggestedRoutes);
-                if (!expanded || expanded.route.length === 0 || expanded.toIndex === expanded.fromIndex) continue;
 
-                const finalFormat = this.nodes[expanded.toIndex].format;
-                const existingSuggestedEdge = this.nodes[expanded.fromIndex].edges
-                    .map(edgeIndex => ({ edgeIndex, edge: this.edges[edgeIndex] }))
-                    .find(({ edge }) =>
-                        edge.to.index === expanded.toIndex
-                        && edge.handler === handler.name
-                        && !!edge.expandedRoute
+                for (const suggestedRoute of handler.suggestedRoutes) {
+                    const expanded = this.expandSuggestedRoute(startNode, suggestedRoute);
+                    if (!expanded || expanded.route.length === 0 || expanded.toIndex === expanded.fromIndex) continue;
+
+                    const finalFormat = this.nodes[expanded.toIndex].format;
+                    const existingSuggestedEdge = this.nodes[expanded.fromIndex].edges
+                        .map(edgeIndex => ({ edgeIndex, edge: this.edges[edgeIndex] }))
+                        .find(({ edge }) =>
+                            edge.to.index === expanded.toIndex
+                            && edge.handler === handler.name
+                            && !!edge.expandedRoute
+                        );
+
+                    const shortcutCost = this.costFunction(
+                        { format: inputFormat, index: expanded.fromIndex },
+                        { format: finalFormat, index: expanded.toIndex },
+                        strictCategories,
+                        handler.name,
+                        handlerOrder.get(handler.name) ?? 0
                     );
 
-                const shortcutCost = this.costFunction(
-                    { format: inputFormat, index: expanded.fromIndex },
-                    { format: finalFormat, index: expanded.toIndex },
-                    strictCategories,
-                    handler.name,
-                    handlerOrder.get(handler.name) ?? 0
-                );
+                    if (existingSuggestedEdge) {
+                        if (shortcutCost < this.edges[existingSuggestedEdge.edgeIndex].cost) {
+                            this.edges[existingSuggestedEdge.edgeIndex].cost = shortcutCost;
+                            this.edges[existingSuggestedEdge.edgeIndex].expandedRoute = expanded.route;
+                        }
+                        continue;
+                    }
 
-                if (existingSuggestedEdge) {
-                    this.edges[existingSuggestedEdge.edgeIndex].cost = shortcutCost;
-                    this.edges[existingSuggestedEdge.edgeIndex].expandedRoute = expanded.route;
-                    continue;
+                    this.edges.push({
+                        from: { format: inputFormat, index: expanded.fromIndex },
+                        to: { format: finalFormat, index: expanded.toIndex },
+                        handler: handler.name,
+                        cost: shortcutCost,
+                        expandedRoute: expanded.route
+                    });
+                    this.nodes[expanded.fromIndex].edges.push(this.edges.length - 1);
                 }
-
-                this.edges.push({
-                    from: { format: inputFormat, index: expanded.fromIndex },
-                    to: { format: finalFormat, index: expanded.toIndex },
-                    handler: handler.name,
-                    cost: shortcutCost,
-                    expandedRoute: expanded.route
-                });
-                this.nodes[expanded.fromIndex].edges.push(this.edges.length - 1);
             }
         }
     }

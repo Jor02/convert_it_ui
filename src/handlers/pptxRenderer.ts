@@ -56,7 +56,7 @@ export default class PptxRendererHandler implements FormatHandler {
   public name: string = "pptx-renderer";
 
   public ready: boolean = true;
-  public suggestedRoutes = ["svg", "pdf:typst"];
+  public suggestedRoutes = [["svg", "pdf:typst"]];
 
   public supportedFormats: FileFormat[] = [
     CommonFormats.PPTX.supported("pptx", true, false),

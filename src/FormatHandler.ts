@@ -344,6 +344,7 @@ export interface SuggestedRouteStep {
 }
 
 export type SuggestedRouteDeclaration = string | SuggestedRouteStep;
+export type SuggestedRoute = SuggestedRouteDeclaration[];
 
 /**
  * Establishes a common interface for converting between file formats.
@@ -362,9 +363,9 @@ export interface FormatHandler {
   /**
    * Optional prioritized route shortcuts expressed as full output chains.
    * Each entry is a route from this handler's input to a final output, e.g.
-   * ["html", "typ", "pdf"] or ["svg", "pdf:typst"].
+   * [["html", "typ", "pdf"], ["html", "typ"]] or [["svg", "pdf:typst"]].
    */
-  suggestedRoutes?: SuggestedRouteDeclaration[];
+  suggestedRoutes?: SuggestedRoute[];
   /** Optional list of user-configurable options. */
   getOptions?: () => HandlerOptionDefinition[];
 

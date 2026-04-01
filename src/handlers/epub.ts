@@ -75,7 +75,7 @@ async function inlineBlobBackedAttributes(
 class EpubHandler implements FormatHandler {
   public name: string = "epub";
   public ready: boolean = false;
-  public suggestedRoutes = ["html", "typ", "pdf"];
+  public suggestedRoutes = [["html", "typ", "pdf"], ["html", "typ"]];
 
   public supportedFormats: FileFormat[] = [
     CommonFormats.EPUB.supported("epub", true, false),
